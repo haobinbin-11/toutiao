@@ -1,5 +1,7 @@
 // 基于axios封装的请求模块
 import axios from 'axios'
+import router from '@/router'
+import { Message } from 'element-ui'
 // 创建一个axios实例,说白了就是复制了一个axios
 // 我们通过这个实例去发请求,把需要配置的配置给这个实例来处理
 // 之前写法
@@ -53,8 +55,29 @@ request.interceptors.request.use(function (config) {
   return Promise.reject(error)
 })
 // 响应拦截器
-axios.interceptors.response.use(function (response) {
+request.interceptors.response.use(function (response) {
+  // 所有响应码为 2XX 的响应都会进入这里
+
+  // response 是响应处理
+  // 注意 一定要把响应结果 return 否则真正发请求的位置拿不到数据
   return response
 }, function (error) {
+  // 任何超出 2xx的响应码都会进入这里
+  if (error.response && error.response.status === 401) {
+    // 跳转到登录页面
+    // 清楚本地存储中的用户登录状态
+    window.localStorage.removeItem('user')
+    router.push('/login')
+    Message('登录状态无效,请重新登录')
+  } else if (error.response.status === 403) {
+    // 没有操作权限
+    Message('没有操作权限')
+  } else if (error.response.status >= 500) {
+    // 服务端错误
+    Message('服务端错误')
+  } else if (error.response.status === 400) {
+    // 客户端参数错误
+    Message('客户端参数错误')
+  }
   return Promise.reject(error)
 })
