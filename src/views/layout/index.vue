@@ -36,6 +36,7 @@
 <script>
 import AppAside from './componets/aside'
 import { getUserProfile } from '@/APi/user'
+import globalBus from '@/utils/global-bus'
 export default {
   name: 'LayoutIndex',
   components: {
@@ -54,6 +55,13 @@ export default {
   },
   created () {
     this.loadUserProfile()
+    // 注册自定义事件
+    // 只有当这个事件发布以后,这个注册函数就会被调用到
+    globalBus.$on('update-user', (data) => {
+      console.log('update-user', data)
+      this.user.name = data.name
+      this.user.photo = data.photo
+    })
   },
   mounted () {
   },

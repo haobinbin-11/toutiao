@@ -9,24 +9,28 @@
     </div>
     <el-row>
         <el-col :span="12">
-            <el-form :model="ruleForm" :rules="rules" ref="ruleForm" label-width="80px" class="demo-ruleForm">
+            <el-form :model="user" ref="ruleForm" label-width="80px" class="demo-ruleForm">
                 <el-form-item label="编号">
                 {{ user.id }}
                 </el-form-item>
                 <el-form-item label="手机">
                 {{ user.mobile }}
                 </el-form-item>
-                <el-form-item label="媒体名称" prop="name">
+                <el-form-item label="媒体名称">
                     <el-input v-model="user.name"></el-input>
                 </el-form-item>
-                <el-form-item label="媒体介绍" prop="desc">
+                <el-form-item label="媒体介绍">
                     <el-input type="textarea" v-model="user.intro"></el-input>
                 </el-form-item>
-                <el-form-item label="邮箱" prop="name">
+                <el-form-item label="邮箱">
                     <el-input v-model="user.email"></el-input>
                 </el-form-item>
                 <el-form-item>
-                <el-button type="primary" @click="submitForm('ruleForm')">保存设置</el-button>
+                <el-button
+                  type="primary"
+                  @click="onUpdateUser"
+                  :loading="updateProfileLoading"
+                >保存设置</el-button>
                 </el-form-item>
             </el-form>
         </el-col>
@@ -51,56 +55,47 @@
     </div>
     <span slot="footer" class="dialog-footer">
       <el-button @click="dialogVisible = false">取 消</el-button>
-      <el-button type="primary" @click="onUpdatePhoto">确 定</el-button>
+      <el-button :loading="updatePhotoLoading" type="primary" @click="onUpdatePhoto">确 定</el-button>
     </span>
   </el-dialog>
 </div>
 </template>
 
 <script>
-import { getUserProfile, updateUserPhoto } from '@/APi/user'
+import { getUserProfile, updateUserPhoto, updateUserProfile } from '@/APi/user'
 import 'cropperjs/dist/cropper.css'
 import Cropper from 'cropperjs'
+import globalBus from '@/utils/global-bus'
 export default {
   name: '',
   components: {},
   props: {},
   data () {
     return {
-      ruleForm: {
-        name: '',
-        region: '',
-        date1: '',
-        date2: '',
-        delivery: false,
-        type: [],
-        resource: '',
-        desc: ''
-      },
-      rules: {
-        name: [
-          { required: true, message: '请输入活动名称', trigger: 'blur' },
-          { min: 3, max: 5, message: '长度在 3 到 5 个字符', trigger: 'blur' }
-        ],
-        region: [
-          { required: true, message: '请选择活动区域', trigger: 'change' }
-        ],
-        date1: [
-          { type: 'date', required: true, message: '请选择日期', trigger: 'change' }
-        ],
-        date2: [
-          { type: 'date', required: true, message: '请选择时间', trigger: 'change' }
-        ],
-        type: [
-          { type: 'array', required: true, message: '请至少选择一个活动性质', trigger: 'change' }
-        ],
-        resource: [
-          { required: true, message: '请选择活动资源', trigger: 'change' }
-        ],
-        desc: [
-          { required: true, message: '请填写活动形式', trigger: 'blur' }
-        ]
-      },
+      // rules: {
+      //   name: [
+      //     { required: true, message: '请输入活动名称', trigger: 'blur' },
+      //     { min: 3, max: 5, message: '长度在 3 到 5 个字符', trigger: 'blur' }
+      //   ],
+      //   region: [
+      //     { required: true, message: '请选择活动区域', trigger: 'change' }
+      //   ],
+      //   date1: [
+      //     { type: 'date', required: true, message: '请选择日期', trigger: 'change' }
+      //   ],
+      //   date2: [
+      //     { type: 'date', required: true, message: '请选择时间', trigger: 'change' }
+      //   ],
+      //   type: [
+      //     { type: 'array', required: true, message: '请至少选择一个活动性质', trigger: 'change' }
+      //   ],
+      //   resource: [
+      //     { required: true, message: '请选择活动资源', trigger: 'change' }
+      //   ],
+      //   desc: [
+      //     { required: true, message: '请填写活动形式', trigger: 'blur' }
+      //   ]
+      // },
       user: { // 用户资料 初始化一下
         email: '',
         id: null,
@@ -111,7 +106,9 @@ export default {
       },
       dialogVisible: false, // 控制上传图片裁切预览的显示状态
       previewImage: '', // 预览图片
-      cropper: null // 裁切器示例
+      cropper: null, // 裁切器示例
+      updatePhotoLoading: false, // 更新用户头像状态
+      updateProfileLoading: false // 更新个人基本信息loading
     }
   },
   computed: {},
@@ -121,14 +118,22 @@ export default {
   },
   mounted () {},
   methods: {
-    submitForm (formName) {
-      this.$refs[formName].validate((valid) => {
-        if (valid) {
-          alert('submit!')
-        } else {
-          console.log('error submit!!')
-          return false
-        }
+    onUpdateUser () {
+      this.updateProfileLoading = true
+      const { name, intro, email } = this.user
+      updateUserProfile({
+        name,
+        intro,
+        email
+      }).then(res => {
+        this.$message({
+          type: 'success',
+          message: '保存成功'
+        })
+        // 关闭loading状态
+        this.updateProfileLoading = false
+        // 发布通知, 用户信息已修改
+        globalBus.$emit('update-user', this.user)
       })
     },
     resetForm (formName) {
@@ -181,6 +186,8 @@ export default {
       // this.cropper.destroy()
     },
     onUpdatePhoto () {
+      // 开启 loading
+      this.updatePhotoLoading = true
       // 获取裁切的图片对象
       this.cropper.getCroppedCanvas().toBlob(file => {
         const fd = new FormData()
@@ -193,6 +200,13 @@ export default {
           // 更新视图展示
           this.user.photo = window.URL.createObjectURL(file)
           // this.user.photo = res.data.data.photo
+          // 关闭 loading
+          this.updatePhotoLoading = false
+          this.$message({
+            type: 'success',
+            message: '更新头像成功'
+          })
+          globalBus.$emit('update-user', this.user)
         })
       })
     }
