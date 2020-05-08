@@ -29,7 +29,7 @@ export default {
   data () {
     return {
       user: {
-        mobile: '13911111111',
+        mobile: '13977777777',
         code: '246810',
         agree: false // 是否同意协议的选中
       },
